@@ -13,10 +13,10 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact_name: web_touchpad-windows
+            artifact_name: web_touchpad
             asset_name: web_touchpad-windows.exe
           - os: macos-latest
-            artifact_name: web_touchpad-macos
+            artifact_name: web_touchpad
             asset_name: web_touchpad-macos
 
     steps:
