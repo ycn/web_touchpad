@@ -12,9 +12,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            artifact_name: web_touchpad-linux
-            asset_name: web_touchpad-linux
           - os: windows-latest
             artifact_name: web_touchpad-windows
             asset_name: web_touchpad-windows.exe
