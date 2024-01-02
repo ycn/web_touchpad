@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web TouchPad</title>
+    <style>
+        * {
+          margin: 0;
+          padding: 0;
+        }
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #f0f0f0;
+        }
+        #touchpad {
+            width: 80%;
+            height: 60%;
+            background-color: #fff;
+            border-radius: 20px;
+            border: 1px solid #666;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19),
+                        0 6px 6px rgba(0, 0, 0, 0.23);
+            touch-action: none;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            user-select: none;
+            margin-top: 40px;
+        }
+        #touchpad::before {
+            content: 'TouchPad';
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            color: rgba(0, 0, 0, 0.6);
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 2px #fff, 0 0 1em #fff, 0 0 0.2em #fff;
+        }
+        .text-engraved {
+            color: #555;
+            text-shadow: 1px 1px 1px #999, 0 0 1px #000;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="text-engraved">Tap for left click</div>
+    <div class="text-engraved">Long press for right click</div>
+    <div id="touchpad"></div>
+    <script>
+        const touchpad = document.getElementById('touchpad');
+        const ws = new WebSocket('ws://' + window.location.host + '/ws');
+
+        let lastX, lastY, lastTime;
+        let startX = 0;
+        let startY = 0;
+        let touchStartTime = 0;
+
+        touchpad.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+
+            lastX = e.touches[0].clientX;
+            lastY = e.touches[0].clientY;
+            lastTime = Date.now();
+
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            touchStartTime = Date.now();
+        });
+
+        touchpad.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+
+            const newX = e.touches[0].clientX;
+            const newY = e.touches[0].clientY;
+            const newTime = Date.now();
+
+            const deltaX = newX - lastX;
+            const deltaY = newY - lastY;
+            const deltaTime = newTime - lastTime;
+            const speedX = deltaX / deltaTime;
+            const speedY = deltaY / deltaTime;
+
+            ws.send(JSON.stringify({ type: 'MouseMove', dx: deltaX, dy: deltaY, sx: speedX, sy: speedY }));
+
+            lastX = newX;
+            lastY = newY;
+            lastTime = newTime;
+        });
+
+        touchpad.addEventListener('touchend', (e) => {
+            const touchEndTime = Date.now();
+            const touchDuration = touchEndTime - touchStartTime;
+            const endX = e.changedTouches[0].clientX;
+            const endY = e.changedTouches[0].clientY;
+            const moveDistance = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+
+            if (touchDuration < 300 && moveDistance < 5) {
+                ws.send(JSON.stringify({ type: 'MouseClick', button: 'Left' }));
+                console.log('Left click');
+            } else if (touchDuration > 600 && moveDistance < 5) {
+                ws.send(JSON.stringify({ type: 'MouseClick', button: 'Right' }));
+                console.log('Right click');
+            }
+        });
+
+        ws.onopen = () => console.log('WebSocket connected');
+        ws.onclose = () => console.log('WebSocket disconnected');
+        ws.onerror = (error) => console.log('WebSocket error:', error);
+
+        window.onbeforeunload = () => {
+            ws.close();
+        };
+    </script>
+</body>
+</html>
