@@ -90,7 +90,14 @@
             const speedX = deltaX / deltaTime;
             const speedY = deltaY / deltaTime;
 
-            ws.send(JSON.stringify({ type: 'MouseMove', dx: deltaX, dy: deltaY, sx: speedX, sy: speedY }));
+            ws.send(JSON.stringify({
+                type: 'MouseMove',
+                dx: deltaX,
+                dy: deltaY,
+                sx: speedX,
+                sy: speedY,
+                touches: e.touches.length,
+            }));
 
             lastX = newX;
             lastY = newY;

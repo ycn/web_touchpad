@@ -13,6 +13,7 @@ enum ClientEvent {
         dy: f64,
         sx: f64,
         sy: f64,
+        touches: i32,
     },
     MouseClick {
         button: MouseButton,
@@ -32,7 +33,7 @@ fn process_mouse_events(receiver: mpsc::Receiver<ClientEvent>) {
     let mut enigo = Enigo::new();
     while let Ok(event) = receiver.recv() {
         match event {
-            ClientEvent::MouseMove { dx, dy, sx, sy } => {
+            ClientEvent::MouseMove { dx, dy, sx, sy, touches } => {
                 // Calculate the acceleration based on speed and distance
                 // and adjust the mouse movement accordingly
                 let acceleration_factor = 10.0; // Acceleration factor, adjustable according to actual requirements
@@ -48,6 +49,12 @@ fn process_mouse_events(receiver: mpsc::Receiver<ClientEvent>) {
 
                 let dx_int = dx.round() as i32;
                 let dy_int = dy.round() as i32;
+
+                if touches == 2 {
+                    enigo.mouse_scroll_y(dy_int * -1);
+                    println!("Mouse scrolled by: dy={}", dy_int * -1);
+                    continue;
+                }
 
                 enigo.mouse_move_relative(dx_int, dy_int);
                 println!("Mouse moved by: dx={}, dy={}", dx, dy);

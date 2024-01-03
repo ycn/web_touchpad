@@ -3,7 +3,11 @@ name: Publish
 on:
   push:
     tags:
-      - "*"
+      - "v*"
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
 
 jobs:
   publish:
@@ -11,22 +15,82 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        target:
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-musl
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+          - x86_64-pc-windows-msvc
+        toolchain: [stable]
         include:
-          - os: windows-latest
-            artifact_name: web_touchpad.exe
-            asset_name: web_touchpad-windows.exe
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            use-cross: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            use-cross: true
           - os: macos-latest
-            artifact_name: web_touchpad
-            asset_name: web_touchpad-macos
+            target: x86_64-apple-darwin
+            use-cross: false
+          - os: macos-11
+            target: aarch64-apple-darwin
+            use-cross: false
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            use-cross: false
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Build
-        run: cargo build --release
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          target: ${{ matrix.target }}
+          override: true
+          default: true
+          profile: minimal
+
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: v1-${{ matrix.target }}
+
+      - name: Build release binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target ${{ matrix.target }}
+          use-cross: ${{ matrix.use-cross }}
+      
+      - name: Build archive
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            ARCHIVE="web_touchpad-$VERSION-${{ matrix.target }}.zip"
+            cp "target/${{ matrix.target }}/release/web_touchpad.exe" "web_touchpad.exe"
+            7z a "$ARCHIVE" "web_touchpad.exe"
+            rm web_touchpad.exe
+            7z a "$ARCHIVE" "public"
+          else
+            ARCHIVE="web_touchpad-$VERSION-${{ matrix.target }}.tar.gz"
+            cp "target/${{ matrix.target }}/release/web_touchpad" "web_touchpad"
+            tar -czvf "$ARCHIVE" "web_touchpad"
+            rm web_touchpad
+            tar -rzvf "$ARCHIVE" "public"
+          fi
+
+          openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
+          openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
+          echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
+
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: target/release/${{ matrix.artifact_name }}
-          asset_name: ${{ matrix.asset_name }}
+          file: ${{ env.ASSET }}
+          asset_name: ${{ env.ASSET }}
           tag: ${{ github.ref }}
