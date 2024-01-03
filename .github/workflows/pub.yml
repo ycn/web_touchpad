@@ -76,11 +76,11 @@ jobs:
             rm web_touchpad.exe
             7z a "$ARCHIVE" "public"
           else
-            ARCHIVE="web_touchpad-$VERSION-${{ matrix.target }}.tar.gz"
+            ARCHIVE="web_touchpad-$VERSION-${{ matrix.target }}.tar"
             cp "target/${{ matrix.target }}/release/web_touchpad" "web_touchpad"
-            tar -czvf "$ARCHIVE" "web_touchpad"
+            tar -cvf "$ARCHIVE" "web_touchpad"
             rm web_touchpad
-            tar -rzvf "$ARCHIVE" "public"
+            tar -rvf "$ARCHIVE" "public"
           fi
 
           openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
