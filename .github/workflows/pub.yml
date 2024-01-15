@@ -73,6 +73,8 @@ jobs:
             tar -cvf "$ARCHIVE" "web_touchpad"
             rm web_touchpad
             tar -rvf "$ARCHIVE" "public"
+            gzip "$ARCHIVE"
+            ARCHIVE="$ARCHIVE.gz"
           fi
 
           openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
