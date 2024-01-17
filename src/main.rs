@@ -39,11 +39,11 @@ fn current_time_millis() -> u128 {
     }
 }
 
-fn should_process_message(last_processed_time: &Arc<AtomicU64>) -> bool {
+fn should_process_scroll_message(last_processed_time: &Arc<AtomicU64>, time_interval: u64) -> bool {
     let now = current_time_millis() as u64;
     let last_time = last_processed_time.load(Ordering::Relaxed);
     let elapsed = now - last_time;
-    if elapsed >= 100 {
+    if elapsed >= time_interval {
         last_processed_time.store(now, Ordering::Relaxed);
         true
     } else {
@@ -78,11 +78,17 @@ fn process_mouse_events(
                         scroll_lines = if dy_int > 0 { 1 } else { -1 };
                     }
 
-                    if should_process_message(&last_processed_time) {
+                    if scroll_lines != 0 && should_process_scroll_message(&last_processed_time, 100)
+                    {
                         enigo.mouse_scroll_y(scroll_lines);
                         println!("Mouse scrolled by: dy={}", scroll_lines);
                     }
 
+                    continue;
+                }
+
+                // Do not respond to move messages for a period of time after scrolling
+                if should_process_scroll_message(&last_processed_time, 1000) {
                     continue;
                 }
 
@@ -99,8 +105,13 @@ fn process_mouse_events(
                 let dx_int = dx.round() as i32;
                 let dy_int = dy.round() as i32;
 
+                // Discard abnormal movement distances
+                if dx_int >= 1000 || dy_int >= 1000 {
+                    continue;
+                }
+
                 enigo.mouse_move_relative(dx_int, dy_int);
-                println!("Mouse moved by: dx={}, dy={}", dx, dy);
+                println!("Mouse moved by: dx={}, dy={}", dx_int, dy_int);
             }
             ClientEvent::MouseClick { button } => {
                 match button {
