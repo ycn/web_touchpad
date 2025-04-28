@@ -87,9 +87,14 @@
             const deltaX = newX - lastX;
             const deltaY = newY - lastY;
             const deltaTime = newTime - lastTime;
-            const speedX = deltaX / deltaTime;
-            const speedY = deltaY / deltaTime;
+            // Improved velocity calculation with time-based normalization
+            const velocityFactor = 1.0 / Math.max(1, deltaTime);
+            const speedX = deltaX * velocityFactor;
+            const speedY = deltaY * velocityFactor;
 
+            // Add viewport dimensions and absolute position for edge detection
+            const touchpadRect = touchpad.getBoundingClientRect();
+            
             ws.send(JSON.stringify({
                 type: 'MouseMove',
                 dx: deltaX,
@@ -97,6 +102,10 @@
                 sx: speedX,
                 sy: speedY,
                 touches: e.touches.length,
+                width: touchpadRect.width,
+                height: touchpadRect.height,
+                x: newX - touchpadRect.left,  // Relative position within touchpad
+                y: newY - touchpadRect.top    // Relative position within touchpad
             }));
 
             lastX = newX;
